@@ -1,0 +1,115 @@
+# ==============================================================================
+# INO Companion Agent 核心配置文件模板 (config.example.yaml)
+# 使用说明：复制本文件为 config.yaml 并根据实际环境调整配置项。
+# ==============================================================================
+
+# 自主感知与搭话配置
+autonomy:
+  background_action_chance: 0.15 # 后台自主触发行动的概率 (0.0~1.0)
+  enable_continue: true          # 允许角色在需要时连续追问或追发消息
+  max_continue_turns: 4          # 连续发信的最大轮次上限
+
+# 角色卡片配置
+character:
+  card_file: character.json      # 遵循 SillyTavern V2 规范的角色卡文件路径
+
+# 前端复古 CRT 颜文字点阵
+expression:
+  canvas_size: 32                # 像素画板网格分辨率 (32x32)
+
+# 大语言模型 (LLM) 通道配置
+llm:
+  mode: auto                     # 模式: "auto"(自适应优先本地), "local"(仅本地), "deepseek"(仅在线兜底)
+  model: auto                    # 模型名称，auto 表示自动探测本地已载入模型
+  base_url: http://127.0.0.1:1234/v1 # LM Studio / Ollama / vLLM 本地 OpenAI 兼容接口
+  api_key: not-needed            # 本地接口通常不需要 key
+
+  # 备用在线大模型（当本地服务未启动或超时时自动兜底）
+  fallback:
+    enabled: true                # 是否启用备用渠道
+    base_url: https://api.deepseek.com
+    model: deepseek-chat
+    # 可以指定存放 API Key 的本地文本路径，或直接设置系统环境变量 DEEPSEEK_API_KEY
+    api_key_file: ""
+
+# 记忆引擎 (RAG 与核心事实沉淀)
+memory:
+  auto_save: true                # 是否在对话后自动提炼记忆事实
+  embedding:
+    idle_unload_minutes: 30      # 闲置时自动卸载向量模型以节省显存 (分钟)
+    model: BAAI/bge-small-zh-v1.5 # 向量模型
+    provider: auto               # auto / onnx / cpu
+
+# 多源新闻感知与主动分享
+news:
+  background_refresh_minutes: 30 # 后台刷新新闻的间隔 (分钟)
+  cache_file: news_cache.json    # 新闻本地缓存路径
+  dedupe_similar: true           # 相似度语义去重
+  dedupe_threshold: 0.85
+  fetch_retries: 1
+  fetch_retry_delay: 0.5
+  fresh_hours: 72                # 保留几小时内的最新资讯
+  news_prompt_chance: 0.05       # 闲暇时主动提起新闻的概率
+  refresh_interval: 3600
+  source_max_workers: 6
+  source_timeout: 10
+  queries:
+  # 自定义新闻检索词列表：伴侣在后台会轮询检索并与你分享相关资讯，可自由增删修改
+  - 人工智能 大模型 创新进展
+  - 计算机 芯片 前沿科技
+  - 每日科技 行业动态
+  sources:
+  - category: 科技硬件
+    name: IT之家
+    priority: 3
+    type: rss
+    url: https://www.ithome.com/rss/
+  - category: AI
+    name: 量子位
+    priority: 3
+    type: rss
+    url: https://www.qbitai.com/feed
+  - category: 权威时政
+    name: 新华社
+    priority: 5
+    type: html_list
+    url: http://www.news.cn/
+  - api: thepaper
+    category: 时政
+    name: 澎湃新闻
+    priority: 4
+    type: api
+  - api: yicai
+    category: 财经
+    name: 第一财经
+    priority: 4
+    type: api
+  - api: baidu_hot
+    category: 热点
+    name: 百度热搜
+    priority: 2
+    type: api
+
+# 状态在位与空闲感知
+presence:
+  active_prompt_chance: 0.02     # 用户活跃时偶发互动概率
+  camera_check_interval: 120.0   # 摄像头低开销人脸采样周期 (秒)
+  check_interval: 5.0            # Win32 输入状态轮询周期 (秒)
+  desk_companion_prompt_chance: 0.01 # 桌面伴侣偶发关怀概率
+  enable_audio_detection: true   # 系统音频播放状态感知
+  enable_camera_detection: true  # 视觉感知 (可选)
+  enable_fullscreen_suppress: true # 全屏应用(游戏/影音)时自动抑制搭话打扰
+  followup_min_interval: 150
+  idle_threshold: 300            # 判定为空闲离开的秒数 (5分钟)
+  min_prompt_interval: 180       # 两次主动搭话的最小保护间隔 (秒)
+  primary_pc_ip: 127.0.0.1       # 监测局域网主电脑在线状态的 IP
+
+# 语音合成 (TTS)
+voice:
+  engine_dir: voicevox_engine    # Voicevox 引擎目录
+  exe_name: run.exe
+  is_muted: false                # 默认是否静音
+  speaker_id: 16                 # Voicevox 角色音色 ID (16: 九州Sora)
+  speed_scale: 1.0               # 语速倍率
+  voice_lang_mode: ja            # 语音主语言模式 (ja: VOICEVOX 原生日语, zh: 中文拼音拟音)
+  volume: 0.8                    # 默认音量 (0.0~1.0)

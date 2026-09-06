@@ -1,0 +1,148 @@
+autonomy:
+  background_action_chance: 0.15
+  enable_continue: true
+  max_continue_turns: 4
+
+character:
+  card_file: character.json
+
+expression:
+  canvas_size: 32
+
+llm:
+  api_key: not-needed
+  base_url: http://127.0.0.1:1234/v1
+  fallback:
+    api_key_file: ""
+    base_url: https://api.deepseek.com
+    enabled: true
+    model: deepseek-chat
+  mode: auto
+  model: auto
+
+memory:
+  auto_save: true
+  embedding:
+    idle_unload_minutes: 30
+    model: BAAI/bge-small-zh-v1.5
+    provider: auto
+
+news:
+  background_refresh_minutes: 30
+  cache_file: news_cache.json
+  dedupe_similar: true
+  dedupe_threshold: 0.85
+  fetch_retries: 1
+  fetch_retry_delay: 0.5
+  fresh_hours: 72
+  news_prompt_chance: 0.05
+  queries:
+  - 人工智能 大模型 创新进展
+  - 计算机 芯片 前沿科技
+  - 每日科技 行业动态
+  refresh_interval: 3600
+  source_max_workers: 6
+  source_timeout: 10
+  sources:
+  - category: 科技硬件
+    name: IT之家
+    priority: 3
+    type: rss
+    url: https://www.ithome.com/rss/
+  - category: AI
+    name: 量子位
+    priority: 3
+    type: rss
+    url: https://www.qbitai.com/feed
+  - category: 数码
+    name: 爱范儿
+    priority: 3
+    type: rss
+    url: https://www.ifanr.com/feed
+  - category: 数码
+    name: 少数派
+    priority: 3
+    type: rss
+    url: https://sspai.com/feed
+  - category: 科技
+    name: cnBeta
+    priority: 3
+    type: rss
+    url: https://www.cnbeta.com.tw/backend.php
+  - api: thepaper
+    category: 时政
+    name: 澎湃新闻
+    priority: 4
+    type: api
+  - api: yicai
+    category: 财经
+    name: 第一财经
+    priority: 4
+    type: api
+  - api: baidu_hot
+    category: 热点
+    name: 百度热搜
+    priority: 2
+    type: api
+  - api: bilibili
+    category: 热点
+    name: B站热门
+    priority: 2
+    type: api
+  - category: 权威时政
+    name: 新华社
+    priority: 5
+    type: html_list
+    url: http://www.news.cn/
+  - category: 权威时政
+    name: 央视新闻
+    priority: 5
+    type: html_list
+    url: https://news.cctv.com/
+  - category: 权威时政
+    name: 人民网
+    priority: 5
+    type: html_list
+    url: http://www.people.com.cn/
+  - category: 财经快讯
+    name: 财联社电报
+    priority: 4
+    type: rss
+    url: https://hub.slarker.me/cls/telegraph
+  - category: 财经
+    name: 华尔街见闻
+    priority: 4
+    type: rss
+    url: https://hub.slarker.me/wallstreetcn/live/global
+  - category: 热点
+    name: 知乎日报
+    priority: 2
+    type: rss
+    url: https://hub.slarker.me/zhihu/daily
+  - category: 科技
+    name: 新浪科技
+    priority: 3
+    type: rss
+    url: https://hub.slarker.me/sina/rollnews
+
+presence:
+  active_prompt_chance: 0.02
+  camera_check_interval: 120.0
+  check_interval: 5.0
+  desk_companion_prompt_chance: 0.01
+  enable_audio_detection: true
+  enable_camera_detection: true
+  enable_fullscreen_suppress: true
+  followup_min_interval: 150
+  idle_threshold: 300
+  min_prompt_interval: 180
+  primary_pc_ip: 127.0.0.1
+
+voice:
+  engine_dir: voicevox_engine
+  exe_name: run.exe
+  is_muted: false
+  speaker_id: 16
+  speed_scale: 1.0
+  voice_lang_mode: ja
+  volume: 0.8

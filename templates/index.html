@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INO Desktop Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #141518;
+      --panel-bg: #1c1e22;
+      --card-bg: #23262c;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #8b95a5;
+      --text-muted: #64748b;
+      --accent-muted: #7c93c2;
+      --accent-subtle: #475569;
+      --user-bubble: #2b303a;
+      --ino-bubble: #212836;
+      --accent-border: #3b4252;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.65rem 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+      z-index: 100;
+      position: fixed;          /* 悬浮不占位 → 收纳时内容顶到顶部（所有东西上移） */
+      top: 0;
+      left: 0;
+      right: 0;
+      transform: translateY(-100%);  /* 默认完全收纳，只有右上角齿轮可见 */
+    }
+
+    header.expanded {
+      transform: translateY(0);       /* 齿轮点击展开（悬浮盖在内容上方） */
+    }
+
+    header.pinned {
+      position: sticky;               /* 钉住时占位展开，正常布局 */
+      transform: translateY(0);
+    }
+
+    /* 齿轮展开时内容区下移，避免被悬浮的 header 遮挡 */
+    .app-layout {
+      transition: padding-top 0.3s;
+    }
+    body.header-expanded .app-layout {
+      padding-top: 58px;
+    }
+
+    .header-tab {
+      position: fixed;                /* 右上角常驻 */
+      top: 4px;
+      right: 10px;
+      z-index: 101;
+      background: #1c1e22;
+      border: 1px solid var(--border-color);
+      padding: 2px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s;
+    }
+
+    .header-tab:hover {
+      color: var(--text-primary);
+      background: #2a2d34;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .brand-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #2d333f;
+      color: #b0c4de;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .brand-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-badge {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      padding: 0.28rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #81a1c1;
+    }
+
+    .voice-select {
+      background: #23262c;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+      max-width: 170px;
+    }
+
+    .voice-select optgroup {
+      background: #181a1f;
+      color: #93c5fd;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    .voice-select option {
+      background: #23262c;
+      color: var(--text-primary);
+      font-weight: 400;
+    }
+
+    .lang-switch-group {
+      display: inline-flex;
+      background: #181a1f;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .lang-switch-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.22rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .lang-switch-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .lang-switch-btn.active.ja {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 0 8px rgba(37, 99, 235, 0.45);
+      font-weight: 600;
+    }
+
+    .lang-switch-btn.active.zh {
+      background: #d97706;
+      color: #ffffff;
+      box-shadow: 0 0 8px rgba(217, 119, 6, 0.45);
+      font-weight: 600;
+    }
+
+    .btn-mute {
+      background: #23262c;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.25rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s;
+    }
+
+    .btn-mute.muted {
+      background: #3b2a2a;
+      color: #f87171;
+      border-color: #7f1d1d;
+    }
+
+    .btn-reset {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-reset:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    .btn-pin {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 0.25rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-pin.pinned {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #3b82f6;
+    }
+
+    .vol-slider {
+      width: 55px;
+      accent-color: var(--accent-muted);
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    .app-layout {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 1.2rem;
+      padding: 1.2rem 1.8rem;
+      flex: 1;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .chat-container {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 2.4rem);
+    }
+    body.header-expanded .chat-container {
+      height: calc(100vh - 58px - 2.4rem);
+    }
+
+    .chat-bar {
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .chat-logs {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .bubble {
+      max-width: 75%;
+      padding: 0.85rem 1.1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .bubble.ino {
+      align-self: flex-start;
+      background: var(--ino-bubble);
+      border: 1px solid var(--accent-border);
+      color: #e2e8f0;
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--user-bubble);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f1f5f9;
+    }
+
+    .bubble.thinking {
+      align-self: flex-start;
+      background: rgba(43, 48, 58, 0.6);
+      border: 1px dashed var(--accent-muted);
+      color: #a0aec0;
+      font-style: italic;
+    }
+
+    .bubble-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bubble-time {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 6px;
+    }
+
+    .dot-anim {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--accent-muted);
+      animation: pulseDot 1.4s infinite ease-in-out both;
+    }
+
+    .dot-anim:nth-child(1) { animation-delay: -0.32s; }
+    .dot-anim:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes pulseDot {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .input-box {
+      padding: 1rem 1.2rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .image-preview {
+      position: relative;
+      display: inline-block;
+      margin: 0.5rem 1.2rem 0;
+      max-width: 160px;
+    }
+    .image-preview img {
+      max-width: 100%;
+      max-height: 120px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      display: block;
+    }
+    .image-preview button {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .image-preview button:hover { background: #c0392b; }
+
+    .input-box input {
+      flex: 1;
+      background: #141518;
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .input-box input:focus {
+      border-color: var(--accent-muted);
+    }
+
+    .input-box input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-action {
+      background: #2b303a;
+      border: 1px solid var(--border-color);
+      padding: 0 1.2rem;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-action:hover {
+      background: #363c48;
+      color: var(--text-primary);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #voice-lang-btn.mode-ja {
+      background: #1e293b;
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+    #voice-lang-btn.mode-ja:hover {
+      background: #253754;
+    }
+    #voice-lang-btn.mode-zh {
+      background: #2d241e;
+      border-color: #f59e0b;
+      color: #fcd34d;
+    }
+    #voice-lang-btn.mode-zh:hover {
+      background: #3b3028;
+    }
+
+    .btn-mic.active {
+      background: #4c3a44;
+      color: #f43f5e;
+      border-color: #7f1d1d;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      height: calc(100vh - 2.4rem);
+      overflow-y: auto;
+    }
+    body.header-expanded .sidebar {
+      height: calc(100vh - 58px - 2.4rem);
+    }
+
+    .card-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.1rem;
+    }
+
+    .card-heading {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Kaomoji Widget（直接渲染颜文字文本）────────── */
+    .kaomoji-panel {
+      text-align: center;
+      padding: 1.1rem 1.1rem 0.8rem;
+    }
+
+    .kaomoji-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0;
+      min-height: 5.5rem;
+    }
+
+    #kaomoji-canvas {
+      width: 240px;
+      height: 70px;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    .kaomoji-status {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+      min-height: 1.2em;
+      transition: opacity 0.3s;
+    }
+
+    /* ── Other sidebar cards ───────────────────────── */
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.45rem 0.6rem;
+      background: #141518;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-label {
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .news-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .news-item {
+      background: #141518;
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .news-item:hover {
+      background: #1a1e26;
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateX(3px);
+      color: var(--text-primary);
+    }
+
+    .news-tag {
+      font-size: 0.7rem;
+      color: var(--accent-muted);
+      margin-bottom: 0.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .news-hint {
+      font-size: 0.65rem;
+      color: #64748b;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .news-item:hover .news-hint {
+      opacity: 1;
+      color: #93c5fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-tab" id="header-tab" onclick="toggleHeaderTab()" title="展开/收起设置栏">⚙️</div>
+
+  <header id="main-header">
+    <div class="brand">
+      <div class="brand-avatar">INO</div>
+      <div>
+        <div class="brand-title">INO Companion</div>
+        <div class="brand-sub">Desktop Interface</div>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-badge" id="thinking-badge" style="display:none; color:#a0aec0;">
+        <span>✨ 思考中...</span>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="state-desc">感知检测中...</span>
+      </div>
+      <div class="status-badge">
+        <button class="btn-mute" id="mute-btn" onclick="toggleMute()" title="开启/静音语音播报">🔊 语音开启</button>
+      </div>
+      <div class="status-badge" style="gap: 0.35rem;">
+        <div class="lang-switch-group">
+          <button class="lang-switch-btn active ja" id="btn-lang-ja" onclick="setVoiceLangMode('ja')" title="将中文实时翻译为地道日文后再由声优语音朗读">🇯🇵 日语</button>
+          <button class="lang-switch-btn" id="btn-lang-zh" onclick="setVoiceLangMode('zh')" title="使用中文拼音转片假名拟音朗读">🇨🇳 中文</button>
+        </div>
+      </div>
+      <div class="status-badge">
+        <span>🎤</span>
+        <select class="voice-select" id="voice-selector" onchange="changeVoice(this.value)">
+          <option value="16" selected>九州Sora · 正常</option>
+          <option value="15">九州Sora · 甜美</option>
+          <option value="18">九州Sora · 傲娇</option>
+          <option value="14">冥鸣Himari · 柔弱</option>
+          <option value="3">ずんだもん · 元气</option>
+          <option value="2">四国めたん · 元气少女</option>
+          <option value="0">四国めたん · 甜腻撒娇</option>
+          <option value="70">満別花丸 · 元气</option>
+          <option value="72">満別花丸 · 卖萌</option>
+          <option value="68">あいえるたん · 可爱少女</option>
+        </select>
+      </div>
+      <div class="status-badge" title="语音朗读语速 (复原默认 1.0x)">
+        <span>⚡ 语速:</span>
+        <input type="range" class="vol-slider" id="speed-slider" min="0.5" max="1.5" step="0.05" value="1.0" onchange="changeSpeed(this.value)" oninput="updateSpeedUI(this.value)">
+        <span id="speed-txt">1.0x</span>
+        <button class="btn-reset" onclick="resetSpeed()" title="复原默认语速 (1.0x)">↺</button>
+      </div>
+      <div class="status-badge" title="音量调整">
+        <span>🔊</span>
+        <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.05" value="0.3" onchange="changeVolume(this.value)" oninput="updateVolUI(this.value)">
+        <span id="vol-txt">30%</span>
+      </div>
+      <div class="status-badge" style="gap:6px;">
+        <button class="btn-pin pinned" id="pin-btn" onclick="toggleHeaderPin()" title="固定或自动收纳设置栏">📌 钉住</button>
+        <button id="hot-reload-btn" onclick="hotReload()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:all 0.2s;" title="热更新：自动重启服务加载最新代码，无需手动杀进程">🔄 热更新</button>
+        <button id="shutdown-btn" onclick="shutdownApp()" style="background:#e74c3c; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:bold; cursor:pointer; transition:all 0.2s;" title="完全安全关闭 INO 服务及后台进程">🛑 退出应用</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <section class="chat-container">
+      <div class="chat-bar">
+        <span>实时对话交互</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--text-muted); font-size:0.78rem;" id="active-model-name">检测模型中...</span>
+          <button id="btn-switch-model" onclick="switchModelMode()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:2px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:all 0.2s;" title="当前使用本地 LM Studio，点击切换到 DeepSeek API" data-mode="local">💻 本地模型</button>
+          <button id="btn-refresh-model" onclick="manualRefreshModel()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:2px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:all 0.2s;" title="立即强制检测 LM Studio / API 当前推载的最新模型">↻ 刷新模型</button>
+        </div>
+      </div>
+      <div class="chat-logs" id="chat-logs">
+      </div>
+      <div class="image-preview" id="image-preview" style="display:none;">
+        <img id="image-preview-img" alt="预览">
+        <button onclick="clearImagePreview()" title="取消图片">✕</button>
+      </div>
+      <div class="input-box">
+        <button class="btn-action btn-mic" id="mic-btn" onclick="toggleMic()" title="开启麦克风语音输入">🎤</button>
+        <button class="btn-action" onclick="document.getElementById('image-file').click()" title="上传图片（本地视觉模型识别）">📷</button>
+        <input type="file" id="image-file" accept="image/*" style="display:none;" onchange="handleImageSelect(event)">
+        <input type="text" id="user-text" placeholder="输入对话内容或点击 🎤 麦克风说话..." onkeypress="handleEnter(event)">
+        <button class="btn-action" id="send-btn" onclick="sendMsg()">发送</button>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <!-- Kaomoji Widget（颜文字直接文本渲染） -->
+      <div class="card-panel kaomoji-panel">
+        <div class="card-heading">INO 颜文字</div>
+        <div class="kaomoji-wrap">
+          <canvas id="kaomoji-canvas" width="240" height="70"></canvas>
+          <div class="kaomoji-status" id="kaomoji-status">待機中</div>
+        </div>
+      </div>
+
+      <div class="card-panel">
+        <div class="card-heading">在场状态 (Presence)</div>
+        <div class="metric-row">
+          <span class="metric-label">当前模式</span>
+          <span class="metric-value" id="val-state">desk_companion</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">📷 摄像头人像识别</span>
+          <span class="metric-value" id="val-camera" style="color:#81a1c1;">开启 (Low CPU 采样)</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">主电脑联机状态</span>
+          <span class="metric-value" id="val-pc">在线</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">笔记本空闲时长</span>
+          <span class="metric-value" id="val-idle">0s</span>
+        </div>
+      </div>
+
+      <div class="card-panel">
+        <div class="card-heading">硬件状态 (Hardware)</div>
+        <div class="metric-row">
+          <span class="metric-label">🖥️ CPU 占用</span>
+          <span class="metric-value" id="hw-cpu">--</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">📦 内存</span>
+          <span class="metric-value" id="hw-mem">--</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">🌡️ 显卡温度</span>
+          <span class="metric-value" id="hw-gpu-temp">--</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">⚡ 显卡占用</span>
+          <span class="metric-value" id="hw-gpu-util">--</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">💾 显存</span>
+          <span class="metric-value" id="hw-vram">--</span>
+        </div>
+      </div>
+
+      <div class="card-panel" style="flex:1;">
+        <div class="card-heading" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>科技与硬件动态 (News Feed)</span>
+          <button id="news-refresh-btn" onclick="manualRefreshNews()" style="background:rgba(255,255,255,0.08); color:#a6adc8; border:1px solid rgba(255,255,255,0.15); padding:2px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; transition:all 0.2s;" title="强制网络刷新最新科技硬件新闻">↻ 刷新</button>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          <input type="text" id="news-search-input" placeholder="指定检索主题(例: 人工智能)" style="flex:1; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); border-radius:4px; padding:4px 8px; color:#d9e0ee; font-size:0.75rem;" onkeypress="if(event.key==='Enter') searchAndPinNews()">
+          <button onclick="searchAndPinNews()" style="background:#89b4fa; color:#11111b; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold; cursor:pointer; white-space:nowrap;">🔍 挂载</button>
+        </div>
+        <div class="news-stack" id="news-stack">
+          <div class="news-item">
+            <span class="news-tag">Hardware News</span>
+            <div>加载中...</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="/static/pixel_kaomoji.js?v=5"></script>
+
+  <script>
+    // ── State ──────────────────────────────────────────
+    let lastChatVersion = -1;
+    let isListening = false;
+    let isMuted = false;
+    let isSending = false;
+    let rec = null;
+
+    // ── Kaomoji Display（直接渲染颜文字文本，替代像素表情）──
+    let kaomojiMap = null; // 后端 /api/expressions 协议数据（拉取失败用内置表）
+    const KAOMOJI_FALLBACK = [
+      {pattern: 'T_T|TωT|ToT|QAQ|Q﹏Q', expression: 'cry'},
+      {pattern: '(≧▽≦)|(ノ◕ヮ◕)ノ|٩(◕‿◕)۶|✧|✦', expression: 'excited'},
+      {pattern: '♥|❤|💕|💗', expression: 'love'},
+      {pattern: '(O_O)|O_O|(⊙_⊙)|0_o', expression: 'surprised'},
+      {pattern: 'OwO|oWo', expression: 'curious'},
+      {pattern: '(◕‿◕)|(◕ᴗ◕)|(^▽^)|(＾▽＾)|(^ω^)', expression: 'happy'},
+      {pattern: '(>_<)|>_<|(；∀；)', expression: 'sad'},
+      {pattern: '(｡>﹏<)|(´･ω･`)', expression: 'pout'},
+      {pattern: '(´-ω-`)|(￣o￣)|zZ', expression: 'sleepy'},
+      {pattern: '(｀皿´)|(￣︿￣)', expression: 'angry'},
+    ];
+
+    function initKaomoji() {
+      fetch('/api/expressions').then(r => r.json()).then(d => {
+        if (d && Array.isArray(d.kaomoji_map) && d.kaomoji_map.length) kaomojiMap = d.kaomoji_map;
+      }).catch(() => {});
+    }
+
+    // 从文本提取实际匹配的颜文字串（未命中返回 null）
+    function detectKaomoji(text) {
+      if (!text) return null;
+      const list = kaomojiMap || KAOMOJI_FALLBACK;
+      for (const item of list) {
+        try {
+          const m = text.match(new RegExp(item.pattern));
+          if (m) return m[0];
+        } catch (e) { /* 忽略坏正则 */ }
+      }
+      return null;
+    }
+
+    function updateKaomoji(kaomojiText, statusText) {
+      if (kaomojiText) INOKaomoji.show(kaomojiText);
+      else INOKaomoji.showDefault();
+      const st = document.getElementById('kaomoji-status');
+      if (st) st.innerText = statusText || '待機中';
+    }
+
+    // 表情 → 代表颜文字兜底映射：文本没带颜文字时，用后端解析的 expression 驱动刷新
+    const EXPRESSION_KAOMOJI = {
+      happy: '(◕‿◕)', excited: '(≧▽≦)', love: '(´,,•ω•,,)♡', shy: '〃∀〃',
+      wink: '(￣▽￣)~*', surprised: '(O_O)', sad: '(︶︹︶)', cry: 'T_T',
+      sleepy: '(´-ω-`)', angry: '(￣︿￣)', pout: '(｡>﹏<)', curious: 'OwO',
+      confused: '(・_・?)', tired: '(´Д｀)', think: '(￣～￣)', idle: ''
+    };
+
+    // ── Speech Recognition ────────────────────────────
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      rec = new SR();
+      rec.lang = 'zh-CN';
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.onresult = (e) => {
+        let txt = (e.results[0][0].transcript || '').trim();
+        document.getElementById('user-text').value = txt;
+        toggleMic();
+        // 乱码/无效识别结果不自动发送：噪音、静音、识别失败常产出问号串或空文本
+        const cleaned = txt.replace(/[？?！!。，,、\s]/g, '');
+        const hasCJK = /[\u4e00-\u9fa5]/.test(txt);
+        const hasAlnum = /[a-zA-Z0-9]{2,}/.test(txt);
+        if (cleaned.length >= 2 && (hasCJK || hasAlnum)) {
+          sendMsg();
+        } else {
+          console.warn('[STT] 识别结果无效，已取消自动发送:', JSON.stringify(txt));
+          const input = document.getElementById('user-text');
+          if (input) input.value = '';
+        }
+      };
+      rec.onerror = () => toggleMic();
+      rec.onend = () => { if (isListening) toggleMic(); };
+    }
+
+    function toggleMic() {
+      const btn = document.getElementById('mic-btn');
+      if (!rec) { alert('该浏览器不支持 Web Speech 麦克风识别'); return; }
+      if (!isListening) {
+        rec.start();
+        isListening = true;
+        btn.classList.add('active');
+      } else {
+        rec.stop();
+        isListening = false;
+        btn.classList.remove('active');
+      }
+    }
+
+    // ── Settings Controls & Persistence ──────────────────
+    let currentVoiceLangMode = 'ja';
+
+    function restoreSavedSettings() {
+      // 1. Voice Language Mode Memory
+      const savedLang = localStorage.getItem('ino_voice_lang_mode');
+      if (savedLang) {
+        currentVoiceLangMode = savedLang;
+        updateVoiceLangBtnUI();
+      }
+
+      // 2. Voice Character Memory
+      const savedVoice = localStorage.getItem('ino_voice');
+      const voiceSel = document.getElementById('voice-selector');
+      if (savedVoice && voiceSel) {
+        const optionExists = Array.from(voiceSel.options).some(o => o.value === savedVoice);
+        if (optionExists) {
+          voiceSel.value = savedVoice;
+        } else {
+          voiceSel.value = "16";
+          localStorage.setItem('ino_voice', "16");
+        }
+      }
+
+      // 3. Volume Memory
+      const savedVol = localStorage.getItem('ino_volume');
+      const volSlider = document.getElementById('vol-slider');
+      if (savedVol !== null && volSlider) {
+        volSlider.value = savedVol;
+        updateVolUI(savedVol);
+      }
+
+      // 4. Mute State Memory
+      const savedMuted = localStorage.getItem('ino_muted');
+      if (savedMuted !== null) {
+        isMuted = (savedMuted === 'true');
+        updateMuteBtnUI();
+      }
+
+      // 5. Speech Speed Scale Memory
+      const savedSpeed = localStorage.getItem('ino_speed_scale');
+      if (savedSpeed !== null) {
+        updateSpeedUI(savedSpeed);
+      }
+
+      // 6. Header Pin State Memory（默认收纳：悬浮顶栏 + 右上角齿轮）
+      const savedPin = localStorage.getItem('ino_header_pinned');
+      const header = document.getElementById('main-header');
+      const btn = document.getElementById('pin-btn');
+      const tab = document.getElementById('header-tab');
+      if (header && btn && tab) {
+        if (savedPin === 'true') {
+          header.classList.add('pinned');
+          btn.classList.add('pinned');
+          tab.style.display = 'none';
+        } else {
+          tab.style.display = 'block';
+          tab.innerHTML = '⚙️';
+        }
+      }
+    }
+
+    function updateVolUI(val) {
+      const txt = document.getElementById('vol-txt');
+      if (txt) txt.innerText = Math.round(parseFloat(val) * 100) + '%';
+    }
+
+    function updateSpeedUI(val) {
+      const txt = document.getElementById('speed-txt');
+      if (txt) txt.innerText = parseFloat(val).toFixed(1) + 'x';
+      const slider = document.getElementById('speed-slider');
+      if (slider) slider.value = val;
+    }
+
+    async function changeSpeed(val) {
+      const sp = parseFloat(val);
+      localStorage.setItem('ino_speed_scale', sp);
+      updateSpeedUI(sp);
+      try {
+        await fetch('/api/settings/speed', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({speed_scale: sp})
+        });
+      } catch (e) {}
+    }
+
+    function resetSpeed() {
+      changeSpeed(1.0);
+    }
+
+    function toggleHeaderTab() {
+      const header = document.getElementById('main-header');
+      const tab = document.getElementById('header-tab');
+      if (!header || !tab) return;
+      const expanded = header.classList.toggle('expanded');
+      document.body.classList.toggle('header-expanded', expanded);
+      tab.innerHTML = expanded ? '✕' : '⚙️';
+    }
+
+    function toggleHeaderPin() {
+      const header = document.getElementById('main-header');
+      const btn = document.getElementById('pin-btn');
+      const tab = document.getElementById('header-tab');
+      if (!header || !btn || !tab) return;
+      const pinned = header.classList.toggle('pinned');
+      header.classList.remove('expanded');
+      document.body.classList.remove('header-expanded');
+      btn.classList.toggle('pinned', pinned);
+      btn.innerHTML = pinned ? '📌 钉住' : '👁️ 收纳';
+      tab.style.display = pinned ? 'none' : 'block';
+      tab.innerHTML = '⚙️';
+      localStorage.setItem('ino_header_pinned', pinned ? 'true' : 'false');
+    }
+
+    async function setVoiceLangMode(mode) {
+      currentVoiceLangMode = mode;
+      localStorage.setItem('ino_voice_lang_mode', mode);
+      updateVoiceLangBtnUI();
+      try {
+        await fetch('/api/settings/voice_lang_mode', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({voice_lang_mode: currentVoiceLangMode})
+        });
+      } catch (e) {}
+    }
+
+    async function toggleVoiceLangMode() {
+      setVoiceLangMode(currentVoiceLangMode === 'ja' ? 'zh' : 'ja');
+    }
+
+    function updateVoiceLangBtnUI() {
+      const btnJa = document.getElementById('btn-lang-ja');
+      const btnZh = document.getElementById('btn-lang-zh');
+      if (btnJa && btnZh) {
+        if (currentVoiceLangMode === 'ja') {
+          btnJa.className = 'lang-switch-btn active ja';
+          btnZh.className = 'lang-switch-btn';
+        } else {
+          btnJa.className = 'lang-switch-btn';
+          btnZh.className = 'lang-switch-btn active zh';
+        }
+      }
+    }
+
+    async function toggleMute() {
+      isMuted = !isMuted;
+      localStorage.setItem('ino_muted', isMuted);
+      updateMuteBtnUI();
+      try { await fetch('/api/settings/mute', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({muted: isMuted}) }); } catch (e) {}
+    }
+
+    function updateMuteBtnUI() {
+      const btn = document.getElementById('mute-btn');
+      if (!btn) return;
+      if (isMuted) { btn.classList.add('muted'); btn.innerText = '🔇 语音静音'; }
+      else { btn.classList.remove('muted'); btn.innerText = '🔊 语音开启'; }
+    }
+
+    async function changeVoice(voiceName) {
+      localStorage.setItem('ino_voice', voiceName);
+      try { await fetch('/api/settings/voice', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({voice_name: voiceName}) }); } catch (e) {}
+    }
+
+    async function changeVolume(volVal) {
+      const v = parseFloat(volVal);
+      localStorage.setItem('ino_volume', v);
+      updateVolUI(v);
+      try { await fetch('/api/settings/volume', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({volume: v}) }); } catch (e) {}
+    }
+
+    // ── Chat ──────────────────────────────────────────
+    async function syncChat() {
+      try {
+        const res = await fetch('/api/chat/history');
+        const data = await res.json();
+        if (data.v !== lastChatVersion) {
+          lastChatVersion = data.v;
+          renderChat(data.messages);
+        }
+      } catch (e) {}
+    }
+
+    let lastMsgCount = 0;  // 增量渲染游标：避免全量重建导致页面晃动
+
+    function bubbleHTML(m) {
+      if (m.is_thinking) {
+        return `
+          <div class="bubble thinking">
+            <div class="bubble-meta">INO</div>
+            <span>INO 正在思考中 (Prefilling...)</span>
+            <div class="dots">
+              <div class="dot-anim"></div>
+              <div class="dot-anim"></div>
+              <div class="dot-anim"></div>
+            </div>
+          </div>
+        `;
+      }
+      const ts = m.timestamp ? new Date(m.timestamp * 1000).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'}) : '';
+      // 用户消息如果有图片（后端保存到 static/uploads/，返回 image_url）显示真实图片
+      const imgTag = (m.sender === 'user' && m.image_url)
+        ? `<img src="${m.image_url}" style="max-width:200px; max-height:200px; border-radius:8px; margin-bottom:6px; display:block;">`
+        : '';
+      return `
+        <div class="bubble ${m.sender}">
+          <div class="bubble-meta">${m.sender === 'ino' ? 'INO' : 'Master'} <span class="bubble-time">${ts}</span></div>
+          ${imgTag}${escapeHtml(m.text)}
+        </div>
+      `;
+    }
+
+    function renderChat(list) {
+      const container = document.getElementById('chat-logs');
+      // 只在用户接近底部时自动滚动，上滚查看历史时不打扰
+      const wasNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+
+      // 历史被重置（/new 等）→ 全量重建
+      if (list.length < lastMsgCount) {
+        container.innerHTML = '';
+        lastMsgCount = 0;
+      }
+
+      // 增量追加：只渲染新消息，不重建整个列表
+      for (let i = lastMsgCount; i < list.length; i++) {
+        container.insertAdjacentHTML('beforeend', bubbleHTML(list[i]));
+      }
+      // 末尾状态变化：thinking ↔ 正式回复（消息数不变，后端原位移除+追加）→ 替换末尾气泡
+      const tail = list[list.length - 1];
+      if (lastMsgCount > 0 && list.length === lastMsgCount) {
+        const domLast = container.lastElementChild;
+        const tailThinking = !!(tail && tail.is_thinking);
+        const domThinking = !!(domLast && domLast.classList.contains('thinking'));
+        if (domLast && domThinking !== tailThinking) {
+          domLast.outerHTML = bubbleHTML(tail);
+        }
+      }
+      // 最后一条是 thinking 且末尾已是 thinking 气泡 → 原位替换（Prefilling 更新）
+      if (tail && tail.is_thinking) {
+        const lastBubble = container.lastElementChild;
+        if (lastBubble && lastBubble.classList.contains('thinking')) {
+          lastBubble.outerHTML = bubbleHTML(tail);
+        }
+      }
+      lastMsgCount = list.length;
+
+      if (wasNearBottom) container.scrollTop = container.scrollHeight;
+
+      // Update kaomoji display from latest INO message（颜文字直接文本渲染）
+      const hasThinkingMsg = list.some(m => m.is_thinking);
+      if (hasThinkingMsg) {
+        updateKaomoji(null, '思考中...');
+      } else {
+        let kaomoji = null, action = '', expr = '';
+        for (let i = list.length - 1; i >= 0; i--) {
+          const m = list[i];
+          if (m.sender === 'ino' && m.text) {
+            kaomoji = detectKaomoji(m.text);
+            action = m.action_label || '';
+            expr = m.expression || '';
+            break;
+          }
+        }
+        // 兜底：文本没命中颜文字时，用后端解析的表情映射刷新显示
+        if (!kaomoji && expr && EXPRESSION_KAOMOJI[expr]) kaomoji = EXPRESSION_KAOMOJI[expr];
+        updateKaomoji(kaomoji, action ? '*' + action + '*' : (expr && expr !== 'idle' ? expr : ''));
+      }
+
+      // Re-enable send controls after response arrives
+      const hasThinking = list.some(m => m.is_thinking);
+      if (!hasThinking && isSending) {
+        isSending = false;
+        setSendingUI(false);
+      }
+    }
+
+    async function syncStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const d = await res.json();
+        document.getElementById('state-desc').innerText = d.state_desc || d.state;
+        document.getElementById('val-state').innerText = d.state;
+        document.getElementById('val-pc').innerText = d.primary_pc_online ? '在线' : '离线';
+        document.getElementById('val-idle').innerText = d.idle_seconds + 's';
+        document.getElementById('active-model-name').innerText = d.model;
+        updateModelBtnUI(d.llm_mode);
+
+        // Sync Mute State
+        if (d.is_muted !== undefined && d.is_muted !== isMuted) {
+          isMuted = d.is_muted;
+          localStorage.setItem('ino_muted', isMuted);
+          updateMuteBtnUI();
+        }
+
+        // Sync Voice Language Mode
+        if (d.voice_lang_mode && d.voice_lang_mode !== currentVoiceLangMode) {
+          currentVoiceLangMode = d.voice_lang_mode;
+          localStorage.setItem('ino_voice_lang_mode', currentVoiceLangMode);
+          updateVoiceLangBtnUI();
+        }
+
+        // Sync Volume Slider
+        const volSlider = document.getElementById('vol-slider');
+        if (volSlider && d.volume !== undefined && document.activeElement !== volSlider) {
+          if (Math.abs(parseFloat(volSlider.value) - parseFloat(d.volume)) > 0.01) {
+            volSlider.value = d.volume;
+            updateVolUI(d.volume);
+            localStorage.setItem('ino_volume', d.volume);
+          }
+        }
+
+        const thinkBadge = document.getElementById('thinking-badge');
+        thinkBadge.style.display = d.is_thinking ? 'flex' : 'none';
+
+        if (document.getElementById('val-camera')) {
+          document.getElementById('val-camera').innerText = d.camera_human_detected ? '检测到人像在桌前' : '未检测到人像';
+          document.getElementById('val-camera').style.color = d.camera_human_detected ? '#81a1c1' : '#e5e7eb';
+        }
+
+        // Sync Voice Selector
+        const voiceSel = document.getElementById('voice-selector');
+        if (voiceSel && document.activeElement !== voiceSel) {
+          const targetVal = String(d.speaker_id || 16);
+          if (targetVal && voiceSel.value !== targetVal) {
+            voiceSel.value = targetVal;
+            localStorage.setItem('ino_voice', targetVal);
+          }
+        }
+      } catch (e) {}
+    }
+
+    function updateModelBtnUI(mode) {
+      const btn = document.getElementById('btn-switch-model');
+      if (!btn) return;
+      const m = mode || 'local';
+      btn.dataset.mode = m;
+      if (m === 'deepseek') {
+        btn.innerText = '☁️ DeepSeek';
+        btn.title = '当前使用 DeepSeek API，点击切回本地 LM Studio';
+        btn.style.borderColor = '#5e81ac';
+        btn.style.color = '#88c0d0';
+      } else {
+        btn.innerText = '💻 本地模型';
+        btn.title = '当前使用本地 LM Studio，点击切换到 DeepSeek API';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }
+
+    async function switchModelMode() {
+      const btn = document.getElementById('btn-switch-model');
+      if (!btn) return;
+      const current = btn.dataset.mode || 'local';
+      const target = current === 'deepseek' ? 'local' : 'deepseek';
+      btn.disabled = true;
+      btn.innerText = '切换中...';
+      try {
+        const res = await fetch('/api/model/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: target })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          updateModelBtnUI(data.llm_mode);
+          if (data.model) {
+            document.getElementById('active-model-name').innerText = data.model;
+          }
+        } else {
+          alert(data.message || '切换失败');
+          updateModelBtnUI(current);
+        }
+      } catch (e) {
+        console.error('Switch model error:', e);
+        alert('切换请求失败，请检查服务状态');
+        updateModelBtnUI(current);
+      } finally {
+        btn.disabled = false;
+        updateModelBtnUI(btn.dataset.mode || current);
+      }
+    }
+
+    async function manualRefreshModel() {
+      const btn = document.getElementById('btn-refresh-model');
+      const modelSpan = document.getElementById('active-model-name');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '检测中...';
+      }
+      try {
+        const res = await fetch('/api/model/refresh', { method: 'POST' });
+        const data = await res.json();
+        if (data.model && modelSpan) {
+          modelSpan.innerText = data.model;
+        }
+      } catch (e) {
+        console.error("Refresh model error:", e);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '↻ 刷新模型';
+        }
+      }
+    }
+
+    async function hotReload() {
+      if (!confirm('确定热更新 INO 服务吗？\n将自动重启并加载最新代码，约 15 秒后恢复。')) return;
+      const btn = document.getElementById('hot-reload-btn');
+      btn.disabled = true;
+      btn.innerText = '重启中...';
+      try {
+        await fetch('/api/system/restart', { method: 'POST' });
+      } catch (e) { /* 服务可能已开始重启，忽略 */ }
+      // 轮询等待服务恢复（最多 60 秒）
+      const t0 = Date.now();
+      let ok = false;
+      while (Date.now() - t0 < 60000) {
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+          const res = await fetch('/api/status', { cache: 'no-store' });
+          if (res.ok) { ok = true; break; }
+        } catch (e) {}
+      }
+      btn.disabled = false;
+      btn.innerText = '🔄 热更新';
+      if (ok) {
+        syncStatus(); syncChat(); loadNews();
+        alert('✅ 热更新完成，服务已加载最新代码！');
+      } else {
+        alert('⚠️ 等待超时，服务可能未正常恢复，请查看 ino_hot.log');
+      }
+    }
+
+    async function shutdownApp() {
+      if (!confirm("确定要完全关闭 INO Companion 服务与后台引擎吗？")) {
+        return;
+      }
+      const btn = document.getElementById('shutdown-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '正在关闭...';
+      }
+      try {
+        await fetch('/api/system/shutdown', { method: 'POST' });
+        document.body.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#1e1e2e; color:#d9e0ee; font-family:sans-serif; text-align:center; padding:20px;">
+            <h2 style="color:#f38ba8; margin-bottom:12px; font-size:1.6rem;">👋 INO Companion 服务已安全关闭</h2>
+            <p style="color:#a6adc8; font-size:1rem; margin-bottom:8px;">Voicevox 语音合成引擎与 Python 后台服务进程均已完全终止。</p>
+            <p style="color:#6c7086; font-size:0.88rem; margin-top:20px;">你现在可以安全关闭此浏览器标签页啦～</p>
+          </div>
+        `;
+      } catch (e) {
+        alert("退出信号已发送，后台服务即将停止。");
+      }
+    }
+
+    async function searchAndPinNews() {
+      const input = document.getElementById('news-search-input');
+      if (!input) return;
+      const query = input.value.trim();
+      if (!query) return;
+
+      const container = document.getElementById('news-stack');
+      if (container) {
+        container.innerHTML = `<div class="news-item"><div class="news-tag"><span>🔍 正在搜索</span></div><div>正在从网络抓取关于「${escapeHtml(query)}」的最新动态并更新挂载到侧栏...</div></div>`;
+      }
+
+      try {
+        const res = await fetch('/api/news/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
+        });
+        const data = await res.json();
+        if (data.news && data.news.length > 0) {
+          renderNews(data.news);
+          input.value = '';
+        } else {
+          alert(`未能检索到关于 '${query}' 的最新新闻。`);
+          await loadNews();
+        }
+      } catch (e) {
+        console.error("Search and pin news error:", e);
+        await loadNews();
+      }
+    }
+
+    async function manualRefreshNews() {
+      const btn = document.getElementById('news-refresh-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '↻ 抓取中...';
+      }
+      try {
+        const res = await fetch('/api/news/refresh', { method: 'POST' });
+        const data = await res.json();
+        if (data.news && data.news.length > 0) {
+          renderNews(data.news);
+        } else {
+          await loadNews();
+        }
+      } catch (e) {
+        console.error("Manual refresh news error:", e);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '↻ 刷新';
+        }
+      }
+    }
+
+    function renderNews(newsList) {
+      if (!newsList || newsList.length === 0) return;
+      const container = document.getElementById('news-stack');
+      if (!container) return;
+      container.innerHTML = newsList.slice(0, 8).map(n => `
+        <div class="news-item" onclick="askInoAboutNews('${escapeHtml(n.title)}')" title="点击让 INO 为你解读/讨论这条资讯">
+          <div class="news-tag">
+            <span>${n.query || 'Tech'}</span>
+            <span class="news-hint">💬 点击让 INO 聊聊</span>
+          </div>
+          <div>${escapeHtml(n.title)}</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadNews() {
+      try {
+        const res = await fetch('/api/news');
+        const news = await res.json();
+        renderNews(news);
+      } catch (e) {}
+    }
+
+    function askInoAboutNews(title) {
+      const input = document.getElementById('user-text');
+      if (input) {
+        input.value = `帮我讲讲右边这条资讯：${title}`;
+        sendMsg();
+      }
+    }
+
+    let currentImageBase64 = null;  // 待发送的图片 base64 字符串
+
+    async function handleImageSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        alert('图片大小超过 10MB 限制，请选择更小的图片');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentImageBase64 = e.target.result;
+        const preview = document.getElementById('image-preview');
+        const img = document.getElementById('image-preview-img');
+        img.src = currentImageBase64;
+        preview.style.display = 'inline-block';
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';  // 允许重复选择同一文件
+    }
+
+    function clearImagePreview() {
+      currentImageBase64 = null;
+      document.getElementById('image-preview').style.display = 'none';
+      document.getElementById('image-preview-img').src = '';
+    }
+
+    async function sendMsg() {
+      if (isSending) return;
+      const input = document.getElementById('user-text');
+      const text = input.value.trim();
+      const image = currentImageBase64;
+      if (!text && !image) return;
+      input.value = '';
+      const hadImage = !!image;
+      clearImagePreview();
+
+      // 本地立即渲染 user bubble（带图片预览），不等 syncChat 轮询
+      const container = document.getElementById('chat-logs');
+      const ts = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+      let bubbleHtml = `<div class="bubble user"><div class="bubble-meta">Master <span class="bubble-time">${ts}</span></div>`;
+      if (hadImage) {
+        bubbleHtml += `<img src="${image}" style="max-width:200px; max-height:200px; border-radius:8px; margin-bottom:6px; display:block;">`;
+      }
+      if (text) bubbleHtml += escapeHtml(text);
+      bubbleHtml += `</div>`;
+      container.insertAdjacentHTML('beforeend', bubbleHtml);
+      container.scrollTop = container.scrollHeight;
+      lastMsgCount += 1;  // 告诉 syncChat “已渲染” → 避免增量追加重复
+
+      isSending = true;
+      setSendingUI(true);
+
+      try {
+        const payload = {message: text || '(图片)'};
+        if (image) payload.image_data = image;
+        await fetch('/api/chat/send', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        // Response comes via polling — syncChat will pick it up
+        syncChat();
+      } catch (e) {
+        isSending = false;
+        setSendingUI(false);
+      }
+    }
+
+    function setSendingUI(sending) {
+      document.getElementById('user-text').disabled = sending;
+      document.getElementById('send-btn').disabled = sending;
+      document.getElementById('send-btn').innerText = sending ? '等待...' : '发送';
+    }
+
+    function handleEnter(e) { if (e.key === 'Enter') sendMsg(); }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+
+    async function loadHardware() {
+      try {
+        const res = await fetch('/api/hardware');
+        const d = await res.json();
+        const el = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+        el('hw-cpu', d.cpu_percent != null ? d.cpu_percent + '%' : '--');
+        el('hw-mem', d.mem_percent != null ? d.mem_percent + '% (' + d.mem_used_gb + '/' + d.mem_total_gb + 'G)' : '--');
+        if (d.gpu) {
+          el('hw-gpu-temp', d.gpu.temp_c + '°C');
+          el('hw-gpu-util', d.gpu.util_percent + '%');
+          el('hw-vram', d.gpu.vram_used_mb + '/' + d.gpu.vram_total_mb + ' MB');
+        } else {
+          el('hw-gpu-temp', 'N/A'); el('hw-gpu-util', 'N/A'); el('hw-vram', 'N/A');
+        }
+      } catch (e) {}
+    }
+
+    // ── Init ──────────────────────────────────────────
+    restoreSavedSettings();
+    initKaomoji(); // 拉取颜文字协议，供 detectKaomoji 检测使用
+    INOKaomoji.init(); // 像素版颜文字渲染引擎
+
+    setInterval(syncChat, 1000);
+    setInterval(syncStatus, 1500);
+    setInterval(loadNews, 180000); // Refresh news every 3 minutes
+    setInterval(loadHardware, 5000); // 硬件状态每 5 秒刷新
+    syncChat();
+    syncStatus();
+    loadNews();
+    loadHardware();
+  </script>
+</body>
+</html>

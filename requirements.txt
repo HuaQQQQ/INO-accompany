@@ -1,0 +1,21 @@
+openai
+PyYAML
+requests
+beautifulsoup4  # 新闻订阅源 RSS/正文解析（news_sources.py）
+
+# ── Web ──────────────────────────────
+flask
+
+# ── 记忆 (RAG) ──────────────────────
+mem0ai
+fastembed
+
+# ── 语音 (TTS/STT) ──────────────────
+deep-translator
+sounddevice  # 常驻音频流播放（消除分块切换爆音）
+
+# ── 感知 (音频/视觉/系统) ────────────
+opencv-python
+pycaw; sys_platform == 'win32'
+comtypes; sys_platform == 'win32'
+pywin32; sys_platform == 'win32'

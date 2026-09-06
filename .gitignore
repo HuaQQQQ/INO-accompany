@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Voice Engines & Large Binaries (Download separately)
+voicevox_engine/
+wheel_download/
+extracted_ort/
+ort_dml_official/
+uv_bin/
+
+# Runtime Logs, Locks & Cache
+*.log
+*.lock
+news_cache.json
+activity_log.json
+news_preferences.json
+
+# User Uploads (Keep folder via .gitkeep)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# IDEs, OS & Tools
+.idea/
+.vscode/
+.qoder/
+scratch/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temporary & Secret Files
+*.tmp
+*api-key*
+*.local.yaml
